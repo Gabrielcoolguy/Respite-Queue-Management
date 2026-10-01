@@ -37,9 +37,7 @@ class Queue_system:
     def current_customer_is_done(self):
         # print(self.queue[0].start_of_waiting_time)
 
-        time_waited = (
-            time.time() - self.queue[0].start_of_waiting_time
-        )  # Start minus time as of removal from queue.
+        time_waited = (time.time() - self.queue[0].start_of_waiting_time)  # Start minus time as of removal from queue.
         self.queue[0].waiting_time = round(float(time_waited), 2)
         # print(system.queue)
 
@@ -60,25 +58,26 @@ class Queue_system:
 
 system = Queue_system()
 
-print("Press enter button to skip.")  
+print("Type SKIP to go to the next option.")  
 while True:
     name = input("Customer name: ")
-
+    if name.upper() == "SKIP":
+        pass
     
     vip = input("vip? Y/N: ")
     if vip.upper() == "Y":
         system.add_customer(name, is_priority=True)
     elif vip.upper() == "N":
         system.add_customer(name, is_priority=False)
-
+    elif vip.upper() == "SKIP":
+        pass
     
     customer_finished = input("Is customer done? Y/N: ")
     if customer_finished.upper() == "Y":
         system.current_customer_is_done()
-    
         
-    customer_to_remove = input("Which customer wants to be removed from queue?: ").upper()
-    if customer_to_remove == "SKIP":
+    customer_to_remove = input("Which customer wants to be removed from queue?: ")
+    if customer_to_remove.upper() == "SKIP":
         pass
     else:    
         system.remove_from_queue(customer_to_remove)
