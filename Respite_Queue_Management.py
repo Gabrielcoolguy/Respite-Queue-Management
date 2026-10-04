@@ -13,7 +13,7 @@ class Customer:
         self.start_of_waiting_time = time.time()
 
     def __repr__(self):
-        return f"NAME: {self.name}, TICKET NUMBER: {self.number}, PRIORITY: {self.priority}, TIME: {self.waiting_time}"
+        return f"[NAME: {self.name}, TICKET NUMBER: {self.number}, PRIORITY: {self.priority}, TIME: {self.waiting_time}]"
 
 
 class Queue_system:
@@ -44,26 +44,33 @@ class Queue_system:
         self.queue.popleft()
 
     def remove_from_queue(self, inputted_ticket):
-        customer_to_be_removed = inputted_ticket
-        i = 0
-        customer_index = i
+        try:
+            customer_to_be_removed = int(inputted_ticket)
+            customer_index = 0
 
-        for i, f in enumerate(self.queue):
-            if customer_to_be_removed == system.queue[i].number:
-                customer_index = i
+            for i, customer in enumerate(self.queue):
+                if customer.number == customer_to_be_removed:
+                    customer_index = i
+                    break
 
-        del system.queue[customer_index]
-        print(f"Ticket Number {f.number} has beeen removed.")
+            if customer_index != 0:
+                del system.queue[customer_index]
+                print(f"Ticket Number {customer_to_be_removed} has been removed.")
+            else:
+                print(f"Ticket Number {customer_to_be_removed} was not found.")
+        except ValueError:
+            print("Something went wrong, please input a number.")
 
 
 system = Queue_system()
 
-print("Type SKIP to go to the next option.")  
+print("Type SKIP to go to the next option.")
+
 while True:
     name = input("Customer name: ")
     if name.upper() == "SKIP":
         pass
-    
+
     vip = input("vip? Y/N: ")
     if vip.upper() == "Y":
         system.add_customer(name, is_priority=True)
@@ -71,17 +78,16 @@ while True:
         system.add_customer(name, is_priority=False)
     elif vip.upper() == "SKIP":
         pass
-    
+
     customer_finished = input("Is customer done? Y/N: ")
     if customer_finished.upper() == "Y":
         system.current_customer_is_done()
-        
-    customer_to_remove = input("Which customer wants to be removed from queue?: ")
-    if customer_to_remove.upper() == "SKIP":
+
+    inputted_ticket = input("Which customer wants to be removed from queue?: ")
+    if inputted_ticket.upper() == "SKIP":
         pass
-    else:    
-        system.remove_from_queue(customer_to_remove)
-        print(f"{customer_to_remove} has been removed")
+    else:
+        system.remove_from_queue(inputted_ticket)
 
     print(list(system.queue))
 
