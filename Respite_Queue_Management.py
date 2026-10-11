@@ -1,15 +1,15 @@
 # Modules
-from collections import deque
 from datetime import datetime
 import time
 
-#TODO: QUEUE_SYSTEM
+
+# TODO: QUEUE SYSTEM
 class Customer:
-    def __init__(self, customer_name, customer_number, priority_status, waiting_time):
+    def __init__(self, customer_name, customer_number, priority_status):
         self.name = customer_name
         self.number = customer_number
         self.priority = priority_status
-        self.waiting_time = waiting_time
+        self.waiting_time = 0
         self.start_of_waiting_time = time.time()
         self.called_time = None
         self.meeting_time = 0
@@ -23,20 +23,25 @@ class Customer:
         return time.time() - self.called_time
 
     def __repr__(self):
-        return f'NAME: {self.name}, TICKET NUMBER: {self.number}, PRIORITY: {self.priority}, TIME: {self.waiting_time}'
+        return f"NAME: {self.name}, TICKET NUMBER: {self.number}, PRIORITY: {self.priority}, TIME WAITED: {self.waiting_time}, TIME MEETING LASTED: {self.meeting_time}"
 
 
-class Queue_system:
+class QueueSystem:
     def __init__(self):
-        self.queue = deque()
+        self.queue = []
         self.history = []
-        self.current = None
+        self.current_customer = None
         self.ticket_number = 101
 
     def add_customer(self, name, is_priority=False):
-        new_customer = Customer(name, self.ticket_number, is_priority, waiting_time=0)
+        new_customer = Customer(name, self.ticket_number, is_priority)
         if is_priority:
-            position = sum(1 for c in self.queue if c.priority)
+            position = len(self.queue)
+            for i, customer in enumerate(self.queue):
+                if not customer.priority:
+                    position = i
+                    break
+
             self.queue.insert(position, new_customer)
         else:
             self.queue.append(new_customer)
@@ -47,112 +52,163 @@ class Queue_system:
         return new_customer
 
     def call_next(self):
-        now = time.time()
+        now = time.time()  # Customer serve time timer will start.
 
-        if self.current is not None:
-            self.current.meeting_time = round(now - self.current.called_time, 2)
-            self.current.done = True
-            self.history.append(self.current)
-            self.current = None
+        if self.current_customer is not None:
+            self.current_customer.meeting_time = round(now - self.current_customer.called_time, 2)
+            self.current_customer.done = True
+            self.history.append(self.current_customer)
+            self.current_customer = None
 
-        if self.queue:
-            nxt = self.queue.popleft()
-            nxt.waiting_time = round(now - nxt.start_of_waiting_time, 2)
-            nxt.called_time = now
-            self.current = nxt
+        if len(self.queue) > 0:
+            next_customer = self.queue.pop(0)
+            next_customer.waiting_time = round(now - next_customer.start_of_waiting_time, 2)
+            next_customer.called_time = now
+            self.current_customer = next_customer
 
-        return self.current
+        return self.current_customer
 
+    def remove_from_queue(self, inputted_ticket):
+        try:
+            customer_to_be_removed = int(inputted_ticket)
+            customer_index = None
+
+            for i, customer in enumerate(self.queue):
+                if customer.number == customer_to_be_removed:
+                    customer_index = i
+                    break
+
+            if customer_index is not None:
+                del self.queue[customer_index]
+                print(f"Ticket Number {customer_to_be_removed} has been removed.")
+            else:
+                print(f"Ticket Number {customer_to_be_removed} was not found.")
+        except ValueError:
+            print("Something went wrong, please input a number.")
+
+# TODO: Database (use arraylist for now)
+
+# TODO: Average time functions 
     def average_meeting_time(self):
-        """Total of all meeting times divided by the number of customers."""
+        # Total of all meeting times divided by the number of customers.
         if not self.history:
             return None
-        return sum(c.meeting_time for c in self.history) / len(self.history)
+
+        total_meeting_time = 0
+        for customer in self.history:
+            total_meeting_time += customer.meeting_time
+
+        total_customers = len(self.history)
+
+        return total_meeting_time / total_customers
 
     def average_waiting_time(self):
-        """Total of all waiting times divided by the number of customers."""
+        # Total of all waiting times divided by the number of customers.
         if not self.history:
             return None
-        return sum(c.waiting_time for c in self.history) / len(self.history)
+
+        total_waiting_time = 0
+        for customer in self.history:
+            total_waiting_time += customer.waiting_time
+
+        total_customers = len(self.history)
+
+        return total_waiting_time / total_customers
 
 
+# TODO: GUI (terminal based for now until code fully done)
 def format_hms(seconds):
     seconds = int(seconds)
-    hours, rem = divmod(seconds, 3600)
-    minutes, secs = divmod(rem, 60)
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
 def format_average(seconds):
     if seconds is None:
         return "-- MINUTES"
+
     if seconds < 60:
-        n = int(round(seconds))
-        return f"{n} SECOND" + ("" if n == 1 else "S")
-    n = int(round(seconds / 60))
-    return f"{n} MINUTE" + ("" if n == 1 else "S")
+        value = int(round(seconds))
+        unit = "SECOND"
+    else:
+        value = int(round(seconds / 60))
+        unit = "MINUTE"
+
+    if value != 1:
+        unit += "S"
+
+    return f"{value} {unit}"
 
 
 def tag(customer):
-    return " [VIP]" if customer.priority else ""
+    if customer.priority:
+        return "[VIP]"
+    return ""
 
 
 def header(title):
     now = datetime.now()
     date = f"{now.strftime('%B').upper()} {now.day}, {now.year}"
     clock = now.strftime("%I:%M:%S %p")
-    print("\n" + "=" * 44)
-    print(f"{date}{clock:>{44 - len(date)}}")
-    print(title.center(44))
-    print("=" * 44)
+    print("=" * 40)
+    print(f"{date}             {clock}")
+    print(title.center(40))
+    print("=" * 40)
 
 
 def customer_view(system):
     header("CUSTOMER VIEW")
     print(f"AVERAGE MEETING TIME: {format_average(system.average_meeting_time())}")
+    print(f"AVERAGE WAITING TIME: {format_average(system.average_waiting_time())}")
     print()
-    if system.current:
-        print(f"READY TO BE SERVED: {system.current.number}  {system.current.name}{tag(system.current)}")
+
+    if system.current_customer is not None:
+        print(f"READY TO BE SERVED: {system.current_customer.number}  {system.current_customer.name} {tag(system.current_customer)}")
     else:
         print("READY TO BE SERVED: ---")
     print()
     print("NEXT IN LINE:")
-    next_five = list(system.queue)[:5]
-    if not next_five:
-        print("  (nobody waiting)")
-    for c in next_five:
-        print(f"  {c.number}  {c.name}{tag(c)}")
+    next_customers = system.queue
+
+    if not next_customers:
+        print("(Nobody is waiting)")
+    for customer in next_customers:
+        print(f"{customer.number}  {customer.name} {tag(customer)}")
 
 
 def control_view(system):
     header("USER CONTROL VIEW")
     print("CURRENT CUSTOMER")
-    if system.current:
-        c = system.current
-        print(f"  {c.number}  {c.name}{tag(c)}")
-        print(f"  Time served: {format_hms(c.current_meeting())}")
+
+    if system.current_customer:
+        customer = system.current_customer
+        print(f"{customer.number}  {customer.name} {tag(customer)}")
+        print(f"Time served: {format_hms(customer.current_meeting())}")
     else:
-        print("  ---")
+        print("---")
     print()
     print("WAITING QUEUE")
+
     if not system.queue:
-        print("  (empty)")
-    for c in system.queue:
-        print(f"  {c.number}  {c.name}{tag(c)}  (waiting {format_hms(time.time() - c.start_of_waiting_time)})")
+        print("(empty)")
+    for customer in system.queue:
+        print(f"{customer.number}  {customer.name} {tag(customer)}  (waiting {format_hms(time.time() - customer.start_of_waiting_time)})")
 
 
 if __name__ == "__main__":
-    system = Queue_system()
+    system = QueueSystem()
 
     while True:
-        print("\n1. Enter customer's name  2. NEXT  3. Control view  4. Customer view  5. CLOSE")
+        print()
+        print("1. Enter customer's name  2. Call next customer  3. Remove a customer 4. Control view  5. Customer view  6. Close")
         choice = input("Choose: ").strip()
 
         if choice == "1":
             name = input("Enter customer's name: ").strip()
-            if name == "":
+            while name == "":
                 print("Name cannot be empty.")
-                continue
+                name = input("Enter customer's name: ").strip()
             vip = input("VIP/Priority? Y/N: ").strip().upper()
             while vip not in ("Y", "N"):
                 vip = input("Please type Y or N: ").strip().upper()
@@ -162,19 +218,23 @@ if __name__ == "__main__":
             print(f"{customer.name} ({kind}) - ticket number {customer.number} (timer started)")
 
         elif choice == "2":
-            current = system.call_next()
-            if current:
-                print(f"Now serving {current.number} - {current.name}{tag(current)}")
+            current_customer = system.call_next()
+            if current_customer is not None:
+                print(f"Now serving {current_customer.number} - {current_customer.name} {tag(current_customer)}")
             else:
                 print("No customers waiting.")
 
         elif choice == "3":
-            control_view(system)
+            inputted_ticket = input("Input the ticket of a customer to remove them:")
+            system.remove_from_queue(inputted_ticket)
 
         elif choice == "4":
-            customer_view(system)
+            control_view(system)
 
         elif choice == "5":
+            customer_view(system)
+
+        elif choice == "6":
             break
 
         else:
