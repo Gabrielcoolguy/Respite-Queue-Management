@@ -1,7 +1,7 @@
 # Modules
 from datetime import datetime
 import time
-
+import re
 
 # TODO: QUEUE SYSTEM
 class Customer:
@@ -206,6 +206,12 @@ if __name__ == "__main__":
 
         if choice == "1":
             name = input("Enter customer's name: ").strip()
+            while bool(re.match(r"^[a-zA-Z\s]+$", name)) != True:
+                print("Please use alphabetical letters only.")
+                name = input("Enter customer's name: ").strip()
+            else:
+                pass
+
             while name == "":
                 print("Name cannot be empty.")
                 name = input("Enter customer's name: ").strip()
@@ -239,3 +245,5 @@ if __name__ == "__main__":
 
         else:
             print("Invalid choice.")
+
+# if re.match(r"^[a-zA-Z\s]+$", name):
