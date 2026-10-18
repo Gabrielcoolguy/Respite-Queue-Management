@@ -32,6 +32,7 @@ class QueueSystem:
         self.history = []
         self.current_customer = None
         self.ticket_number = 101
+        self.customers_that_left = 0
 
     def add_customer(self, name, is_priority=False):
         new_customer = Customer(name, self.ticket_number, is_priority)
@@ -81,10 +82,27 @@ class QueueSystem:
             if customer_index is not None:
                 del self.queue[customer_index]
                 print(f"Ticket Number {customer_to_be_removed} has been removed.")
+                customers_that_left += 1
             else:
                 print(f"Ticket Number {customer_to_be_removed} was not found.")
         except ValueError:
             print("Something went wrong, please input a number.")
+
+    def push_back_to_end(self):
+        position = 0
+        late_customer = self.queue[0]
+        if late_customer.priority:
+            for i, customer in enumerate(self.queue):
+                if not customer.priority:
+                    position = i
+                    break
+            self.queue.insert(position, late_customer)
+            del self.queue[0]
+        else:
+            self.queue.append(late_customer)
+            del self.queue[0]
+
+
 
 # TODO: Database (use arraylist for now)
 
@@ -114,6 +132,9 @@ class QueueSystem:
         total_customers = len(self.history)
 
         return total_waiting_time / total_customers
+
+
+# TODO ADMIN DASHBOARD  
 
 
 # TODO: GUI (terminal based for now until code fully done)
@@ -201,7 +222,7 @@ if __name__ == "__main__":
 
     while True:
         print()
-        print("1. Enter customer's name  2. Call next customer  3. Remove a customer 4. Control view  5. Customer view  6. Close")
+        print("1. Enter customer's name  2. Call next customer  3. Remove a customer 4. Push Customer to End 5. Control view  6. Customer view 7. Admin Dashboard 8. Close")
         choice = input("Choose: ").strip()
 
         if choice == "1":
@@ -230,20 +251,25 @@ if __name__ == "__main__":
             else:
                 print("No customers waiting.")
 
+
         elif choice == "3":
             inputted_ticket = input("Input the ticket of a customer to remove them:")
             system.remove_from_queue(inputted_ticket)
 
         elif choice == "4":
+            system.push_back_to_end()
+        
+        elif choice == "5":
             control_view(system)
 
-        elif choice == "5":
+        elif choice == "6":
             customer_view(system)
 
-        elif choice == "6":
+        elif choice == "7":
+            system.admin_dashboard()
+
+        elif choice == "8":
             break
 
         else:
             print("Invalid choice.")
-
-# if re.match(r"^[a-zA-Z\s]+$", name):
