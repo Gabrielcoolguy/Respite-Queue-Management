@@ -2,6 +2,8 @@
 from datetime import datetime
 import time
 import re
+import openpyxl
+
 
 # TODO: QUEUE SYSTEM
 class Customer:
@@ -10,7 +12,7 @@ class Customer:
         self.number = customer_number
         self.priority = priority_status
         self.waiting_time = 0
-        self.start_of_waiting_time = time.time()
+        self.start_of_waiting_time = time.monotonic()
         self.called_time = None
         self.meeting_time = 0
         self.done = False
@@ -20,7 +22,7 @@ class Customer:
             return 0
         if self.done:
             return self.meeting_time
-        return time.time() - self.called_time
+        return time.monotonic() - self.called_time
 
     def __repr__(self):
         return f"NAME: {self.name}, TICKET NUMBER: {self.number}, PRIORITY: {self.priority}, TIME WAITED: {self.waiting_time}, TIME MEETING LASTED: {self.meeting_time}"
@@ -32,7 +34,11 @@ class QueueSystem:
         self.history = []
         self.current_customer = None
         self.ticket_number = 101
-        self.customers_that_left = 0
+        self.total_regular_customers = 0
+        self.total_priority_customers = 0
+        self.total_regular_customers_that_left = 0
+        self.total_priority_customers_that_left = 0
+        self.total_customers_that_left = 0
 
     def add_customer(self, name, is_priority=False):
         new_customer = Customer(name, self.ticket_number, is_priority)
@@ -44,8 +50,10 @@ class QueueSystem:
                     break
 
             self.queue.insert(position, new_customer)
+            self.total_priority_customers += 1
         else:
             self.queue.append(new_customer)
+            self.total_regular_customers += 1
 
         self.ticket_number += 1
         if self.ticket_number > 999:
@@ -53,7 +61,7 @@ class QueueSystem:
         return new_customer
 
     def call_next(self):
-        now = time.time()  # Customer serve time timer will start.
+        now = time.monotonic()  # Customer serve time timer will start.
 
         if self.current_customer is not None:
             self.current_customer.meeting_time = round(now - self.current_customer.called_time, 2)
@@ -80,9 +88,16 @@ class QueueSystem:
                     break
 
             if customer_index is not None:
-                del self.queue[customer_index]
-                print(f"Ticket Number {customer_to_be_removed} has been removed.")
-                customers_that_left += 1
+                if self.queue[customer_index].priority:
+                    self.total_priority_customers_that_left += 1
+                    self.total_customers_that_left += 1
+                    del self.queue[customer_index]
+                    print(f"Ticket Number {customer_to_be_removed} has been removed.")
+                else:
+                    self.total_regular_customers_that_left += 1
+                    self.total_customers_that_left += 1
+                    del self.queue[customer_index]
+                    print(f"Ticket Number {customer_to_be_removed} has been removed.")
             else:
                 print(f"Ticket Number {customer_to_be_removed} was not found.")
         except ValueError:
@@ -103,12 +118,67 @@ class QueueSystem:
             del self.queue[0]
 
 
+    def admin_dashboard(self, saved):
+        try:
+            now = datetime.now()
+            date = f"{now.year}-{now.month}-{now.day}"
 
-# TODO: Database (use arraylist for now)
+            # Below not needed for GUI only for terminal
+            total_customers = len(self.history)   
+            total_queue_time = format_average(self.average_serving_time() + self.average_waiting_time())
+
+            print(f"Total Overall Customers: {total_customers}")
+            print(f"Total Regular Customers: {self.total_regular_customers}")
+            print(f"Total Priority Customers: {self.total_priority_customers}")
+            print(f"Total Customers that left: {self.total_customers_that_left}")
+            print(f"Average Meeting Time: {format_average(self.average_serving_time())}")
+            print(f"Average Waiting Time: {format_average(self.average_waiting_time())}")
+            print(f"Total Queue Time: {total_queue_time}")
+
+        
+            if saved:
+                wb = openpyxl.Workbook()
+                sheet = wb['Sheet']
+                sheet.title = "Customers"
+                wb.create_sheet(title="Queue Time")
+                column_width = 18
+
+
+                data = [["Customer Type", "Total Arrivals", "Served Customers", "Abandoned Queue"],
+                        ["Regular", self.total_regular_customers, self.total_regular_customers - self.total_regular_customers_that_left, f"=B2-C2"],
+                        ["Priority", self.total_priority_customers, self.total_priority_customers - self.total_priority_customers_that_left, f"=B3-C3"],
+                        ["Total", f"=SUM(B2:B3)", f"=SUM(C2:C3)", f"=SUM(D2:D3)"]]
+
+                for row in data:
+                    sheet.append(row)
+
+                for column in ["A", "B", "C", "D"]:
+                    sheet.column_dimensions[column].width = column_width
+
+                sheet = wb["Queue Time"]
+
+                data2 = [["Average Wait Time", int(format_average(self.average_waiting_time())[0])],
+                        ["Average Serve Time", int(format_average(self.average_serving_time())[0])],
+                        ["Total Time", f"=SUM(B1:B2)"]
+                ]
+
+                for row in data2:
+                    sheet.append(row)
+
+                for column in ["A", "B"]:
+                    sheet.column_dimensions[column].width = column_width
+
+                wb.save(f'{date}_ADMIN-STATS.xlsx')
+                
+            else:
+                print("You chose not to save.")
+        except TypeError:
+                    print("No customers were served yet.")
+    
 
 # TODO: Average time functions 
-    def average_meeting_time(self):
-        # Total of all meeting times divided by the number of customers.
+    def average_serving_time(self):
+        # Total of all serving times divided by the number of customers.
         if not self.history:
             return None
 
@@ -132,9 +202,6 @@ class QueueSystem:
         total_customers = len(self.history)
 
         return total_waiting_time / total_customers
-
-
-# TODO ADMIN DASHBOARD  
 
 
 # TODO: GUI (terminal based for now until code fully done)
@@ -180,7 +247,7 @@ def header(title):
 
 def customer_view(system):
     header("CUSTOMER VIEW")
-    print(f"AVERAGE MEETING TIME: {format_average(system.average_meeting_time())}")
+    print(f"AVERAGE MEETING TIME: {format_average(system.average_serving_time())}")
     print(f"AVERAGE WAITING TIME: {format_average(system.average_waiting_time())}")
     print()
 
@@ -214,7 +281,7 @@ def control_view(system):
     if not system.queue:
         print("(empty)")
     for customer in system.queue:
-        print(f"{customer.number}  {customer.name} {tag(customer)}  (waiting {format_hms(time.time() - customer.start_of_waiting_time)})")
+        print(f"{customer.number}  {customer.name} {tag(customer)}  (waiting {format_hms(time.monotonic() - customer.start_of_waiting_time)})")
 
 
 if __name__ == "__main__":
@@ -266,7 +333,10 @@ if __name__ == "__main__":
             customer_view(system)
 
         elif choice == "7":
-            system.admin_dashboard()
+            saved = input("Do you want to save the admin dashboard stats as an excel file? Y/N").strip().upper()
+            while saved not in ("Y", "N"):
+                saved = input("Do you want to save the admin dashboard stats as an excel file? Y/N")
+            system.admin_dashboard(saved=(saved == "Y"))
 
         elif choice == "8":
             break
