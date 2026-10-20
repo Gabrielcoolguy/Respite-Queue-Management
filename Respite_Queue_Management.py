@@ -3,6 +3,9 @@ from datetime import datetime
 import time
 import re
 import openpyxl
+from openpyxl.chart import PieChart, BarChart, Reference
+from openpyxl.chart.layout import Layout, ManualLayout
+from openpyxl.chart.label import DataLabelList
 
 
 # TODO: QUEUE SYSTEM
@@ -155,6 +158,31 @@ class QueueSystem:
                 for column in ["A", "B", "C", "D"]:
                     sheet.column_dimensions[column].width = column_width
 
+                bar_chart = BarChart()
+                data_bar_chart = Reference(sheet, min_col=1, min_row=2, max_col=4, max_row=4)
+                bar_chart.add_data(data_bar_chart, titles_from_data=True, from_rows=True)
+
+                categories = Reference(sheet, min_col=2, min_row=1, max_col=4, max_row=1)
+                bar_chart.set_categories(categories)
+
+                bar_chart.grouping = "clustered"
+                bar_chart.overlap = -10
+
+                bar_chart.y_axis.delete = False
+                bar_chart.x_axis.delete = False
+
+                bar_chart.legend.position = "b"
+
+                bar_chart.layout = Layout(
+                    manualLayout=ManualLayout(
+                        x=0,
+                        y=0,
+                        h=0.65,
+                        w=0.9,
+                        ))
+
+                sheet.add_chart(bar_chart, "F10")
+
                 sheet = wb["Queue Time"]
 
                 data2 = [["Average Wait Time", int(format_average(self.average_waiting_time())[0])],
@@ -167,6 +195,25 @@ class QueueSystem:
 
                 for column in ["A", "B"]:
                     sheet.column_dimensions[column].width = column_width
+
+                pie_chart = PieChart()
+
+                data_pie_chart = Reference(sheet, min_col=1, min_row=2, max_col=3, max_row=2)
+                pie_chart.add_data(data_pie_chart, titles_from_data=True)
+
+                categories_pie_chart = Reference(sheet, min_col=1, min_row=1, max_col=3, max_row=1)
+                pie_chart.set_categories(categories_pie_chart)
+
+                pie_chart.dataLabels = DataLabelList()
+
+                pie_chart.dataLabels.showPercent = True
+                pie_chart.dataLabels.showCatName = False
+                pie_chart.dataLabels.showVal = False
+                pie_chart.dataLabels.showSerName = False
+                pie_chart.dataLabels.position = "outEnd"
+
+
+                sheet.add_chart(pie_chart, "F10")
 
                 wb.save(f'{date}_ADMIN-STATS.xlsx')
                 
