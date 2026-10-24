@@ -185,10 +185,10 @@ class QueueSystem:
 
                 sheet = wb["Queue Time"]
 
-                data2 = [["Average Wait Time", int(format_average(self.average_waiting_time())[0])],
-                        ["Average Serve Time", int(format_average(self.average_serving_time())[0])],
-                        ["Total Time", f"=SUM(B1:B2)"]
+                data2 = [["Average Wait Time", "Average Serve Time", "Total Time"],
+                         [int(format_average(self.average_waiting_time())[0]), int(format_average(self.average_serving_time())[0]), f"=SUM(B1:B2)"]    
                 ]
+                
 
                 for row in data2:
                     sheet.append(row)
